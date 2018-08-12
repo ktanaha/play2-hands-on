@@ -10,6 +10,12 @@ scalaVersion := "2.12.6"
 libraryDependencies += guice
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test
 
+libraryDependencies ++= Seq(
+    "com.h2database" % "h2" % "1.4.196",
+    "org.scalikejdbc" %% "scalikejdbc" % "3.2.2",
+    "org.scalikejdbc" %% "scalikejdbc-config" % "3.2.2",
+    "org.scalikejdbc" %% "scalikejdbc-play-initializer" % "2.6.0-scalikejdbc-3.2"
+)
 // Adds additional packages into Twirl
 //TwirlKeys.templateImports += "com.example.controllers._"
 
