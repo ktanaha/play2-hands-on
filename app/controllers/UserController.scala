@@ -10,7 +10,6 @@ import models._
 class UserController @Inject()(components: MessagesControllerComponents)
   extends MessagesAbstractController(components) {
 
-  // コンパニオンオブジェクトに定義したFormを参照するためにimport文を追加
   import UserController._
 
   private val u = Users.syntax(("u"))
@@ -21,12 +20,10 @@ class UserController @Inject()(components: MessagesControllerComponents)
     */
   def list = Action { implicit request =>
     DB.readOnly { implicit session =>
-      // ユーザのリストを取得
       val users = withSQL {
         select.from(Users as u).orderBy(u.id.asc)
       }.map(Users(u.resultName)).list.apply()
 
-      // 一覧画面を表示
       Ok(views.html.user.list(users))
     }
   }
@@ -36,18 +33,14 @@ class UserController @Inject()(components: MessagesControllerComponents)
     */
   def edit(id: Option[Long]) = Action { implicit request =>
     DB.readOnly { implicit session =>
-      // リクエストパラメータにIDが存在する場合
       val form = id match {
-        // IDが渡されなかった場合は新規登録フォーム
         case None => userForm
-        // IDからユーザ情報を1件取得してフォームに詰める
         case Some(id) => Users.find(id) match {
           case Some(user) => userForm.fill(UserForm(Some(user.id), user.name, user.companyId))
           case None => userForm
         }
       }
 
-      // プルダウンに表示する会社のリストを取得
       val companies = withSQL {
         select.from(Companies as c).orderBy(c.id.asc)
       }.map(Companies(c.resultName)).list().apply()
@@ -59,12 +52,39 @@ class UserController @Inject()(components: MessagesControllerComponents)
   /**
     * 登録実行
     */
-  def create = TODO
+  def create = Action { implicit request =>
+    DB.localTx { implicit session =>
+      userForm.bindFromRequest.fold(
+        error => {
+          BadRequest(views.html.user.edit(error, Companies.findAll()))
+        },
+        form => {
+          Users.create(form.name, form.companyId)
+          Redirect(routes.UserController.list)
+        }
+      )
+    }
+  }
 
   /**
     * 更新実行
     */
-  def update = TODO
+  def update = Action { implicit request =>
+    DB.localTx {implicit session =>
+      userForm.bindFromRequest.fold(
+        error => {
+          BadRequest(views.html.user.edit(error, Companies.findAll()))
+        },
+        form => {
+          Users.find(form.id.get).foreach { user =>
+            Users.save(user.copy(name = form.name, companyId = form.companyId))
+          }
+
+          Redirect(routes.UserController. list)
+        }
+      )
+    }
+  }
 
   /**
     * 削除実行
@@ -74,10 +94,8 @@ class UserController @Inject()(components: MessagesControllerComponents)
 }
 
 object UserController {
-  // フォームの値を格納するケースクラス
   case class UserForm(id: Option[Long], name: String, companyId: Option[Int])
 
-  // formから送信されたデータ ⇔ ケースクラスの変換を行う
   val userForm = Form(
     mapping(
       "id"        -> optional(longNumber),
