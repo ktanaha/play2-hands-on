@@ -89,7 +89,15 @@ class UserController @Inject()(components: MessagesControllerComponents)
   /**
     * 削除実行
     */
-  def remove(id: Long) = TODO
+  def remove(id: Long) = Action { implicit request =>
+    DB.localTx {implicit session =>
+      Users.find(id).foreach { user =>
+        Users.destroy(user)
+      }
+
+      Redirect(routes.UserController.list)
+    }
+  }
 
 }
 
