@@ -1,5 +1,5 @@
 @* このテンプレートの引数 *@
-@(users: Seq[models.Users])(implicit request: RequestHeader)
+@(users: Seq[(models.Users, Option[models.Companies])])(implicit request: RequestHeader)
 
 @* テンプレートで利用可能なヘルパーをインポート *@
 @import helper._
@@ -17,15 +17,17 @@
             <tr>
                 <th>ID</th>
                 <th>名前</th>
+                <th>会社名</th>
                 <th>&nbsp;</th>
             </tr>
             </thead>
             <tbody>
             @* ユーザの一覧をループで出力 *@
-            @users.map { user =>
+            @users.map { case (user, company) =>
             <tr>
                 <td>@user.id</td>
                 <td><a href="@routes.UserController.edit(Some(user.id))">@user.name</a></td>
+                <td>@company.map(_.name)</td>
                 <td>@helper.form(CSRF(routes.UserController.remove(user.id))){
                     <input type="submit" value="削除" class="btn btn-danger btn-xs"/>
                     }

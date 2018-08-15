@@ -21,8 +21,10 @@ class UserController @Inject()(components: MessagesControllerComponents)
   def list = Action { implicit request =>
     DB.readOnly { implicit session =>
       val users = withSQL {
-        select.from(Users as u).orderBy(u.id.asc)
-      }.map(Users(u.resultName)).list.apply()
+        select.from(Users as u).leftJoin(Companies as c).on(u.companyId, c.id).orderBy(u.id.asc)
+      }.map { rs =>
+        (Users(u)(rs), rs.intOpt(c.resultName.id).map(_ => Companies(c)(rs)))
+      }.list.apply()
 
       Ok(views.html.user.list(users))
     }
