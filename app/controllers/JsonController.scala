@@ -13,6 +13,14 @@ object JsonController {
       (__ \ "name"     ).write[String] and
       (__ \ "companyId").writeNullable[Int]
     )(unlift(Users.unapply))
+
+  case class UserForm(id: Option[Long], name: String, companyId: Option[Int])
+
+  implicit val userFormReads = (
+    (__ \ "id"       ).readNullable[Long] and
+      (__ \ "name"     ).read[String]       and
+      (__ \ "companyId").readNullable[Int]
+  )(UserForm)
 }
 
 class JsonController @Inject()(compnents: ControllerComponents)
@@ -38,12 +46,32 @@ class JsonController @Inject()(compnents: ControllerComponents)
   /**
     * ユーザ登録
     */
-  def create = TODO
+  def create = Action(parse.json) { implicit request =>
+    request.body.validate[UserForm].map { form =>
+      DB.localTx { implicit session =>
+        Users.create(form.name, form.companyId)
+        Ok(Json.obj("result" -> "success"))
+      }
+    }.recoverTotal { e =>
+      BadRequest(Json.obj("result" -> "failure", "error" -> JsError.toJson(e)))
+    }
+  }
 
   /**
     * ユーザ更新
     */
-  def update = TODO
+  def update = Action(parse.json) { implicit request =>
+    request.body.validate[UserForm].map { form =>
+      DB.localTx { implicit session =>
+        Users.find(form.id.get).foreach { user =>
+          Users.save(user.copy(name = form.name, companyId = form.companyId))
+        }
+        Ok(Json.obj("result" -> "success"))
+      }
+    }.recoverTotal { e =>
+      BadRequest(Json.obj("result" -> "failure", "error" -> JsError.toJson(e)))
+    }
+  }
 
   /**
     * ユーザ削除
